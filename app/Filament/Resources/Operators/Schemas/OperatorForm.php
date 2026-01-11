@@ -4,9 +4,7 @@ namespace App\Filament\Resources\Operators\Schemas;
 
 use App\Models\Brand;
 use App\Models\Currency;
-use App\Models\User;
-use Filament\Actions\Action;
-use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -15,7 +13,6 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
-use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 class OperatorForm
@@ -23,85 +20,70 @@ class OperatorForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Tabs::make('Operator Details')
+            Tabs::make('Operator Management')
                 ->tabs([
                     self::getGeneralInfoTab(),
                     self::getBrandsTab(),
                     self::getUnassignedTab(),
-                ])
-                ->columnSpanFull(),
+                ])->columnSpanFull(),
         ]);
     }
 
-    /**
-     * TAB 1: General Info
-     */
     protected static function getGeneralInfoTab(): Tabs\Tab
     {
         return Tabs\Tab::make('General Information')
             ->icon('heroicon-m-information-circle')
             ->schema([
-                Section::make('Core Identity')
+                Section::make('Operator Core')
                     ->columns(2)
                     ->schema([
-                        TextInput::make('operator_id')
-                            ->label('System ID')
-                            ->disabled()
-                            ->hidden(fn ($record) => $record === null),
-
-                        TextInput::make('client_name')
-                            ->label('Operator Name')
-                            ->required()
-                            ->readOnly(fn ($record) => $record !== null),
-
+                        TextInput::make('operator_id')->label('System ID')->disabled(),
+                        TextInput::make('client_name')->label('Operator Name')->required(),
+                        
                         TextInput::make('client_code')
                             ->label('Operator Code')
-                            ->required()
-                            ->readOnly(fn ($record) => $record !== null),
+                            ->password()
+                            ->revealable()
+                            ->required(),
 
                         TextInput::make('client_api_key')
                             ->label('API Key')
-                            ->default(fn () => Str::random(32))
                             ->password()
                             ->revealable()
-                            ->suffixAction(self::generateTokenAction('client_api_key', 32)),
+                            ->default(fn () => Str::random(32)),
 
-                        TextInput::make('client_secret')
-                            ->label('Operator Secret')
-                            ->default(fn () => Str::random(40))
+                        TextInput::make('client_access_token')
+                            ->label('Access Token')
                             ->password()
                             ->revealable()
-                            ->suffixAction(self::generateTokenAction('client_secret', 40)),
+                            ->default(fn () => Str::random(40)),
+
+                        // Displaying the shared Secret from oauth_clients
+                        TextInput::make('oauth_secret')
+                            ->label('Shared OAuth Secret')
+                            ->placeholder('Auto-generated on save')
+                            ->disabled()
+                            ->afterStateHydrated(fn ($state, $record, $set) => 
+                                $set('oauth_secret', $record?->oauthClient?->client_secret)
+                            ),
                     ]),
 
                 Grid::make(2)->schema([
-                    Section::make('Operator Credentials')
-                        ->columnSpan(1)
-                        ->schema(self::getUserCredentialFields('operator', false)),
-
-                    Section::make('Status & Wallet')
-                        ->columnSpan(1)
-                        ->schema([
-                            ToggleButtons::make('status_id')
-                                ->label('Account Status')
-                                ->options(['1' => 'Active', '2' => 'Disabled'])
-                                ->colors(['1' => 'success', '2' => 'danger'])
-                                ->default('1')
-                                ->grouped(),
-
-                            ToggleButtons::make('wallet_type')
-                                ->options(['0' => 'Seamless', '1' => 'Transfer'])
-                                ->colors(['0' => 'success', '1' => 'info'])
-                                ->default('0')
-                                ->grouped(),
-                        ]),
+                    Section::make('Credentials')->schema(self::getUserFields('operator'))->columnSpan(1),
+                    Section::make('Settings')->schema([
+                        ToggleButtons::make('status_id')
+                            ->grouped()
+                            ->options(['1' => 'Active', '2' => 'Disabled'])
+                            ->colors(['1' => 'success', '2' => 'danger'])->inline(),
+                        ToggleButtons::make('wallet_type')
+                            ->grouped()
+                            ->options(['0' => 'Seamless', '1' => 'Transfer'])
+                            ->colors(['0' => 'success', '1' => 'info'])->inline(),
+                    ])->columnSpan(1),
                 ]),
             ]);
     }
 
-    /**
-     * TAB 2: Brands & Automated Client Management
-     */
     protected static function getBrandsTab(): Tabs\Tab
     {
         return Tabs\Tab::make('Brands')
@@ -109,168 +91,133 @@ class OperatorForm
             ->schema([
                 Repeater::make('brands')
                     ->relationship()
-                    ->collapsible()
-                    ->itemLabel(fn ($state) => $state['brand_name'] ?? 'New Brand')
                     ->schema([
-                        Section::make('Brand Template (Apply to Clients)')
-                            ->description('These fields are not saved in the Brand table. They are used to auto-generate or update the Clients below.')
-                            ->schema([
-                                Grid::make(2)->schema([
-                                    TextInput::make('brand_name')
-                                        ->required()
-                                        ->live(onBlur: true),
-                                    
-                                    // "selected_currencies" is dehydrated(true) so the Page hook can read it
-                                    Select::make('selected_currencies')
-                                        ->label('Generate Clients for Currencies')
-                                        ->multiple()
-                                        ->options(Currency::all()->pluck('code', 'code'))
-                                        ->searchable()
-                                        ->dehydrated(true), 
-                                ]),
-
-                                Grid::make(3)->schema([
-                                    TextInput::make('player_details_url')
-                                        ->label('Template Player Details URL')
-                                        ->url()
-                                        ->dehydrated(true),
-
-                                    TextInput::make('fund_transfer_url')
-                                        ->label('Template Fund Transfer URL')
-                                        ->url()
-                                        ->dehydrated(true),
-
-                                    TextInput::make('transaction_checker_url')
-                                        ->label('Template Transaction Checker URL')
-                                        ->url()
-                                        ->dehydrated(true),
-                                ]),
-                            ]),
+                        Grid::make(2)->schema([
+                            TextInput::make('brand_name')->required()->extraInputAttributes(['onChange' => 'this.value = this.value.toUpperCase()']),
+                            Section::make('Brand User')->schema(self::getUserFields('brand'))->compact(),
+                        ]),
                         
-                        Section::make('Active Clients for this Brand')
-                            ->headerActions([
-                                // Optional visual hint
-                                Action::make('hint')
-                                    ->label('Auto-managed by Template')
-                                    ->icon('heroicon-m-sparkles')
-                                    ->color('gray'),
-                            ])
-                            ->visible(fn ($record) => $record !== null)
+                        Section::make('Template: Auto-Generate Clients')
+                            ->description('Entering values here will create/update clients for selected currencies.')
+                            ->collapsible()
+                            // This line ensures it only shows on the "Create" form
+                            ->visible(fn ($record) => $record === null) 
                             ->schema([
-                                Repeater::make('clients')
-                                    ->relationship()
-                                    ->disabled()
-                                    ->addable(false)
-                                    ->deletable(false)
-                                    ->schema(self::getClientFields()), 
+                                Select::make('temp_currencies')
+                                    ->label('Select Currencies')
+                                    ->multiple()
+                                    ->options(Currency::pluck('code', 'code'))
+                                    ->dehydrated(true),
+                                
+                                Grid::make(3)->schema([
+                                    TextInput::make('temp_player_url')
+                                        ->label('Player Details URL')
+                                        ->dehydrated(true),
+                                    TextInput::make('temp_fund_url')
+                                        ->label('Fund Transfer URL')
+                                        ->dehydrated(true),
+                                    TextInput::make('temp_check_url')
+                                        ->label('Transaction Checker URL')
+                                        ->dehydrated(true),
+                                ]),
                             ]),
+
+                        Repeater::make('clients')
+                            ->relationship()
+                            ->addable(false)
+                            ->hidden(fn ($record) => $record === null)
+                            ->schema(self::getClientFields(false)),
                     ]),
             ]);
     }
 
-    /**
-     * TAB 3: Unassigned Clients
-     */
     protected static function getUnassignedTab(): Tabs\Tab
     {
         return Tabs\Tab::make('Unassigned Clients')
-            ->icon('heroicon-m-exclamation-triangle')
-            ->visible(fn ($record) => 
-                $record && $record->clients()
-                    ->where(fn($q) => $q->whereNull('brand_id')->orWhere('brand_id', ''))
-                    ->exists()
-            )
             ->schema([
-                Section::make('Legacy Client Management')
-                    ->description('Assign these orphaned clients to a brand to move them out of this list.')
-                    ->schema([
-                        Repeater::make('unassigned_clients')
-                            ->relationship('clients', fn ($query) => 
-                                $query->where(fn($q) => $q->whereNull('brand_id')->orWhere('brand_id', ''))
-                            )
-                            ->itemLabel(fn ($state) => $state['client_name'] ?? 'Unassigned Client')
-                            ->collapsible()
-                            ->schema(self::getClientFields(true)),
-                    ]),
+                Repeater::make('unassigned_clients')
+                    // Ensure 'clients' is the method name in your Operator model
+                    ->relationship('clients', function ($query) {
+                        return $query->where(function ($q) {
+                            $q->whereNull('brand_id')
+                            ->orWhere('brand_id', 0) // Some DBs use 0 instead of NULL
+                            ->orWhere('brand_id', '');
+                        });
+                    })
             ]);
     }
 
-    /**
-     * Reusable Client Fields
-     */
-    protected static function getClientFields(bool $isUnassigned = false): array
+    protected static function getClientFields(bool $showAssignment): array
     {
         return [
-            Grid::make(3)->schema([
-                TextInput::make('client_id')->label('ID')->disabled(),
-                TextInput::make('client_name')->label('Name')->required(),
-                TextInput::make('default_currency')->label('Currency'),
+            Grid::make(4)->schema([
+                TextInput::make('client_id')->disabled(),
+                TextInput::make('client_name')->required(),
+                TextInput::make('default_currency')->disabled(),
+                Select::make('brand_id')
+                    ->label('Assign Brand')
+                    ->options(fn($get) => Brand::where('operator_id', $get('../../operator_id'))->pluck('brand_name', 'brand_id'))
+                    ->visible($showAssignment),
             ]),
-
-            Section::make('Assignment')
-                ->visible($isUnassigned)
-                ->schema([
-                    Select::make('brand_id')
-                        ->label('Assign to Brand')
-                        ->options(function ($get) {
-                            $operatorId = $get('../../operator_id');
-                            return Brand::where('operator_id', $operatorId)->pluck('brand_name', 'brand_id');
-                        })
-                        ->searchable()
-                        ->preload(),
-                ]),
-
-            Section::make('Client API Configurations')
-                ->columns(3)
-                ->schema([
-                    TextInput::make('player_details_url')->url(),
-                    TextInput::make('fund_transfer_url')->url(),
-                    TextInput::make('transaction_checker_url')->url(),
-                ]),
+            Grid::make(3)->schema([
+                Select::make('client_line')->options(['row' => 'ROW', 'asia' => 'Asia']),
+                Select::make('api_ver')->options(['2.0' => '2.0', '2.1' => '2.1']),
+                ToggleButtons::make('status_id')->options(['1' => 'Active', '2' => 'Disabled'])->inline(),
+            ]),
+            Grid::make(3)->schema([
+                TextInput::make('player_details_url')->url(),
+                TextInput::make('fund_transfer_url')->url(),
+                TextInput::make('transaction_checker_url')->url(),
+            ]),
         ];
     }
 
-    /**
-     * Helper: Credentials logic
-     */
-    protected static function getUserCredentialFields(string $type, bool $required = true): array
+    protected static function getUserFields($type): array
     {
         return [
-            TextInput::make('email')
+            TextInput::make($type . '_email')
                 ->email()
-                ->required($required)
-                ->afterStateHydrated(fn ($component, $record) => $component->state(self::fetchUser($record, $type)?->email)),
-            
-            TextInput::make('username')
-                ->required($required)
-                ->afterStateHydrated(fn ($component, $record) => $component->state(self::fetchUser($record, $type)?->username)),
+                ->label('Email')
+                ->dehydrated(true)
+                ->afterStateHydrated(function ($state, $set, $record) use ($type) {
+                    if (!$record) return;
+                    // Find the user linked to this operator/brand
+                    $user = \App\Models\User::where('user_type', $type)
+                        ->where('operator_id', $record->operator_id)
+                        ->when($type === 'brand', fn($q) => $q->where('brand_id', $record->brand_id))
+                        ->first();
+                    
+                    if ($user) $set($type . '_email', $user->email);
+                }),
 
-            TextInput::make('password')
+            TextInput::make($type . '_username')
+                ->label('Username')
+                ->dehydrated(true)
+                ->afterStateHydrated(function ($state, $set, $record) use ($type) {
+                    if (!$record) return;
+                    $user = \App\Models\User::where('user_type', $type)
+                        ->where('operator_id', $record->operator_id)
+                        ->when($type === 'brand', fn($q) => $q->where('brand_id', $record->brand_id))
+                        ->first();
+                    
+                    if ($user) $set($type . '_username', $user->username);
+                }),
+
+            TextInput::make($type . '_password')
+                ->label('Password')
                 ->password()
-                ->revealable()
-                ->required(fn ($record) => $required && !$record)
-                ->afterStateHydrated(fn ($component, $record) => $component->state(self::fetchUser($record, $type)?->password_string))
-                ->dehydrateStateUsing(fn ($state) => filled($state) ? bcrypt($state) : null)
-                ->dehydrated(fn ($state) => filled($state)),
+                ->revealable() // This allows you to click the eye icon to see the raw string
+                ->dehydrated(fn ($state) => filled($state))
+                ->afterStateHydrated(function ($set, $record) use ($type) {
+                    if (!$record) return;
+                    $user = \App\Models\User::where('user_type', $type)
+                        ->where('operator_id', $record->operator_id)
+                        ->when($type === 'brand', fn($q) => $q->where('brand_id', $record->brand_id))
+                        ->first();
+                    
+                    // Set the field to the raw 'password_string' from the database
+                    if ($user) $set($type . '_password', $user->password_string);
+                }),
         ];
-    }
-
-    protected static function fetchUser($record, $type)
-    {
-        if (!$record) return null;
-        $query = User::where('user_type', $type);
-        return match($type) {
-            'operator' => $query->where('operator_id', $record->operator_id)->first(),
-            'brand'    => $query->where('brand_id', $record->brand_id)->first(),
-            'agent'    => $query->where('client_id', $record->client_id)->first(),
-            default    => null,
-        };
-    }
-
-    protected static function generateTokenAction(string $field, int $length): Action
-    {
-        return Action::make('generate_' . $field)
-            ->icon('heroicon-m-arrow-path')
-            ->action(fn ($set) => $set($field, Str::random($length)));
     }
 }

@@ -9,6 +9,8 @@ class OAuthClients extends Model
     protected $table = 'oauth_clients';
     protected $primaryKey = 'id';
 
+    public $timestamps = false;
+
     protected $fillable = [ 'client_id', 'client_secret' ];
 
     public function client()

@@ -12,12 +12,14 @@ class Client extends Model
         'operator_id',
         'brand_id',
         'client_name',
-        'client_id',
         'default_currency',
         'api_ver',
+        'status_id', 
         'player_details_url',
         'fund_transfer_url',
         'transaction_checker_url',
+        'balance_url', 
+        'debit_credit_transfer_url', 
     ];
 
     public function brand()

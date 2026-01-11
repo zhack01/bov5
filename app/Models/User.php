@@ -18,10 +18,11 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $fillable = [
-        'name', 'username', 'email', 'password', 'operator_id', 'client_id', 'brand_id'
-    ];
 
+    protected $fillable = [
+        'name', 'username', 'email', 'password', 'password_string', 
+        'user_type', 'operator_id', 'brand_id', 'client_id' 
+    ];
      /**
      * The attributes that should be hidden for serialization.
      *
@@ -43,12 +44,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'user_metadata' => 'json', // Combine here
         ];
     }
 
-    protected $casts = [
-        'user_metadata' => 'json',
-    ];
 
     public function operator()
     {
