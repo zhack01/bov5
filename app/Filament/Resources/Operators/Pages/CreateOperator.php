@@ -20,53 +20,10 @@ class CreateOperator extends CreateRecord
         $operator = $this->record;
         $data = $this->form->getRawState();
 
-        // 1. Create Operator User
+        // 1. Create ONLY the Operator User (Form handles brands)
         $this->createRelatedUser($operator, 'operator', $data);
 
-        $sharedSecret = Str::random(40);
-        
-        // Loop through the raw form data instead of the relationship collection
-        if (!empty($data['brands'])) {
-            foreach ($data['brands'] as $brandData) {
-                
-                // Find the Brand ID that Filament just created for this entry
-                // We search by name and operator to get the auto-generated primary key
-                $brand = \App\Models\Brand::where('operator_id', $operator->operator_id)
-                    ->where('brand_name', $brandData['brand_name'])
-                    ->first();
-
-                if (!$brand) continue;
-
-                // 2. Create Brand User
-                $this->createRelatedUser($brand, 'brand', $brandData);
-
-                $currencies = $brandData['temp_currencies'] ?? [];
-                foreach ($currencies as $code) {
-                    // 3. Create Client
-                    $client = \App\Models\Client::create([
-                        'operator_id'               => $operator->operator_id,
-                        'brand_id'                  => $brand->brand_id, // Use the ID we just fetched
-                        'client_name'               => strtoupper($brand->brand_name . '_' . $code),
-                        'default_currency'          => $code,
-                        'status_id'                 => 1,
-                        'api_ver'                   => '2.0',
-                        'player_details_url'        => $brandData['temp_player_url'] ?? null,
-                        'fund_transfer_url'         => $brandData['temp_fund_url'] ?? null,
-                        'transaction_checker_url'   => $brandData['temp_check_url'] ?? null,
-                        'balance_url'               => $brandData['temp_player_url'] ?? 'https://www.tiger-games.com/blank',
-                        'debit_credit_transfer_url' => $brandData['temp_fund_url'] ?? 'https://www.tiger-games.com/blank',
-                    ]);
-
-                    // 4. Create OAuth Record
-                    \App\Models\OAuthClients::create([
-                        'client_id'     => $client->client_id,
-                        'client_secret' => $sharedSecret,
-                    ]);
-                }
-            }
-        }
-        
-        // 5. Create the database tables
+        // 2. Create the database tables
         // $this->createOperatorDatabaseTables($operator->client_code);
     }
 

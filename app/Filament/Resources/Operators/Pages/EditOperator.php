@@ -3,10 +3,13 @@
 namespace App\Filament\Resources\Operators\Pages;
 
 use App\Filament\Resources\Operators\OperatorResource;
+use App\Models\Brand;
 use App\Models\Client;
+use App\Models\OAuthClients;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class EditOperator extends EditRecord
@@ -22,78 +25,100 @@ class EditOperator extends EditRecord
 
     protected function getSaveFormAction(): \Filament\Actions\Action
     {
-        return parent::getSaveFormAction()
-            ->requiresConfirmation(); // This will pop up a modal even if you hit Ctrl+S
+        return parent::getSaveFormAction()->requiresConfirmation();
     }
 
-    protected function afterSave(): void
+    // This is the "Secret Sauce". We store the raw input here.
+    public array $capturedBrands = [];
+
+    /**
+     * This hook runs BEFORE the database is even touched.
+     * We grab the brands array while 'temp_currencies' still exists.
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
     {
-        $operator = $this->record;
-        $data = $this->form->getRawState();
-
-        // Look for an existing secret from the first available client of this operator
-        $existingSecret = \App\Models\OAuthClients::whereHas('client', function ($query) use ($operator) {
-            $query->where('operator_id', $operator->operator_id);
-        })->value('client_secret');
-
-        // Use existing secret if found, otherwise generate a new one
-        $sharedSecret = $existingSecret ?? \Illuminate\Support\Str::random(40);
-
-        if (!empty($data['brands'])) {
-            foreach ($data['brands'] as $brandData) {
-                $brand = \App\Models\Brand::where('operator_id', $operator->operator_id)
-                    ->where('brand_name', $brandData['brand_name'])
-                    ->first();
-
-                if (!$brand) continue;
-
-                // Automation for new brands (checking if clients exist)
-                $clientCount = \App\Models\Client::where('brand_id', $brand->brand_id)->count();
-
-                if ($clientCount === 0) {
-                    // ... (Create Brand User logic) ...
-
-                    $currencies = $brandData['temp_currencies'] ?? [];
-                    foreach ($currencies as $code) {
-                        $client = \App\Models\Client::create([
-                            'operator_id'      => $operator->operator_id,
-                            'brand_id'         => $brand->brand_id,
-                            'client_name'      => strtoupper($brand->brand_name . '_' . $code),
-                            'default_currency' => $code,
-                            'status_id'        => 1,
-                            'api_ver'          => '2.0',
-                            // ... (URL fields) ...
-                        ]);
-
-                        // Apply the shared secret (either reused or newly generated)
-                        \App\Models\OAuthClients::create([
-                            'client_id'     => $client->client_id,
-                            'client_secret' => $sharedSecret,
-                        ]);
-                    }
-                }
-            }
-        }
+        $this->capturedBrands = $data['brands'] ?? [];
+        return $data;
     }
-    protected function createRelatedUser($model, $type, $formData): void
-    {
-        $email = $formData[$type . '_email'] ?? null;
-        $username = $formData[$type . '_username'] ?? null;
-        $password = $formData[$type . '_password'] ?? null;
 
-        // Skip if the user data wasn't filled out in the form
-        if (!$email || !$username) return;
+    // protected function afterSave(): void
+    // {
+    //     $operator = $this->record;
 
-        User::create([
-            'email'           => $email,
-            'username'        => $username,
-            'password_string' => $password, // Raw string as per your system
-            'password'        => bcrypt($password),
-            'user_type'       => $type,
-            'operator_id'     => ($type === 'operator') ? $model->operator_id : $model->operator_id,
-            'brand_id'        => ($type === 'brand') ? $model->brand_id : null,
-            // If you have a client_id column in Users:
-            'client_id'       => ($type === 'agent') ? $model->client_id : null,
-        ]);
-    }
+    //     /**
+    //      * FIX: Use $this->form->getRawState() instead of the mutated data.
+    //      * getRawState() bypasses Filament's "cleaning" and gives us the 
+    //      * actual values currently sitting in the browser's form.
+    //      */
+    //     $formData = $this->form->getRawState();
+
+    //     dd($formData);
+        
+    //     $brandsData = $formData['brands'] ?? [];
+
+    //     // If it's still empty, we use a more aggressive method to grab it from the request
+    //     if (empty($brandsData)) {
+    //         $brandsData = request()->input('components.0.updates.data.brands') // Livewire path
+    //                     ?? request()->input('serverMemo.data.brands') 
+    //                     ?? [];
+    //     }
+
+    //     // DEBUG: This should now show your data
+    //     // dd($brandsData);
+
+    //     foreach ($brandsData as $brandData) {
+    //         // Find brand record
+    //         $brand = \App\Models\Brand::where('operator_id', $operator->operator_id)
+    //             ->where('brand_name', strtoupper($brandData['brand_name'] ?? ''))
+    //             ->first();
+
+    //         if (!$brand) continue;
+
+    //         $currencies = $brandData['temp_currencies'] ?? [];
+
+    //         // Check for 0 clients to prevent double creation
+    //         if (!empty($currencies) && $brand->clients()->count() === 0) {
+                
+    //             // Shared Secret Logic
+    //             $sharedSecret = \Illuminate\Support\Facades\DB::table('oauth_clients')
+    //                 ->join('clients', 'oauth_clients.client_id', '=', 'clients.client_id')
+    //                 ->where('clients.operator_id', $operator->operator_id)
+    //                 ->value('client_secret') 
+    //                 ?? \Illuminate\Support\Str::random(40);
+
+    //             // 1. Create User
+    //             if (!empty($brandData['brand_email'])) {
+    //                 \App\Models\User::create([
+    //                     'email'           => $brandData['brand_email'],
+    //                     'username'        => $brandData['brand_username'],
+    //                     'password_string' => $brandData['brand_password'] ?? null,
+    //                     'password'        => bcrypt($brandData['brand_password'] ?? 'password'),
+    //                     'user_type'       => 'brand',
+    //                     'operator_id'     => $operator->operator_id,
+    //                     'brand_id'        => $brand->brand_id,
+    //                 ]);
+    //             }
+
+    //             // 2. Create Clients
+    //             foreach ($currencies as $code) {
+    //                 $client = \App\Models\Client::create([
+    //                     'operator_id'      => $operator->operator_id,
+    //                     'brand_id'         => $brand->brand_id,
+    //                     'client_name'      => strtoupper($brand->brand_name . '_' . $code),
+    //                     'default_currency' => $code,
+    //                     'status_id'        => 1,
+    //                     'api_ver'          => '2.0',
+    //                     'player_details_url'      => $brandData['temp_player_url'] ?? null,
+    //                     'fund_transfer_url'       => $brandData['temp_fund_url'] ?? null,
+    //                     'transaction_checker_url' => $brandData['temp_check_url'] ?? null,
+    //                 ]);
+
+    //                 \App\Models\OAuthClients::create([
+    //                     'client_id'     => $client->client_id,
+    //                     'client_secret' => $sharedSecret,
+    //                 ]);
+    //             }
+    //         }
+    //     }
+    // }
 }
