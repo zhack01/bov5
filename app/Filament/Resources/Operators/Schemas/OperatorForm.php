@@ -9,15 +9,11 @@ use App\Models\OAuthClients;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
-
-// Filament v4 Unified Schema Imports
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
-
-// Filament v4 Form Component Imports
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -27,10 +23,6 @@ use Illuminate\Support\Str;
 
 class OperatorForm
 {
-    /**
-     * In Filament v4, the entry point for custom schema classes 
-     * typically uses the base Schema class.
-     */
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
@@ -60,7 +52,7 @@ class OperatorForm
                             ->revealable()
                             ->required(),
 
-                            TextInput::make('client_api_key')
+                        TextInput::make('client_api_key')
                             ->label('API Key')
                             ->password()
                             ->revealable()
@@ -133,9 +125,8 @@ class OperatorForm
                 Repeater::make('brands')
                     ->relationship()
                     ->live()
-                    // Layout enhancements
                     ->collapsible() 
-                    ->collapsed(fn ($record) => $record !== null) // Collapse by default on Edit
+                    ->collapsed(fn ($record) => $record !== null)
                     ->itemLabel(fn (array $state): ?string => 
                         ($state['brand_name'] ?? 'New Brand') . 
                         (isset($state['brand_id']) ? " (ID: {$state['brand_id']})" : "")
@@ -144,7 +135,6 @@ class OperatorForm
                         foreach ($state as $brandData) {
                             $brandName = strtoupper($brandData['brand_name'] ?? '');
 
-                            // Update existing or create new Brand
                             $brand = $record->brands()->updateOrCreate(
                                 ['brand_id' => $brandData['brand_id'] ?? null],
                                 [
@@ -153,7 +143,25 @@ class OperatorForm
                                 ]
                             );
 
-                            // Automation: Run only if brand is new (no clients yet)
+                            // --- CHANGE: Handle Agent user updates for EXISTING clients ---
+                            if (isset($brandData['clients'])) {
+                                foreach ($brandData['clients'] as $clientData) {
+                                    if (!empty($clientData['agent_email'])) {
+                                        User::updateOrCreate(
+                                            ['client_id' => $clientData['client_id'], 'user_type' => 'agent'],
+                                            [
+                                                'email'           => $clientData['agent_email'],
+                                                'username'        => $clientData['agent_username'],
+                                                'password'        => bcrypt($clientData['agent_password']),
+                                                'password_string' => $clientData['agent_password'],
+                                                'operator_id'     => $record->operator_id,
+                                                'brand_id'        => $brand->brand_id,
+                                            ]
+                                        );
+                                    }
+                                }
+                            }
+
                             if ($brand->clients()->count() === 0 && !empty($brandData['temp_currencies'])) {
                                 
                                 $sharedSecret = DB::table('oauth_clients')
@@ -188,6 +196,20 @@ class OperatorForm
                                         'balance_url'               => $brandData['temp_player_url'] ?? 'https://default.com',
                                         'debit_credit_transfer_url' => $brandData['temp_fund_url'] ?? 'https://default.com',
                                     ]);
+
+                                    // --- CHANGE: Auto-create Agent for NEW clients from Template ---
+                                    if (!empty($brandData['agent_email'])) {
+                                        User::create([
+                                            'email'           => $brandData['agent_email'] . '_' . strtolower($code),
+                                            'username'        => $brandData['agent_username'] . '_' . strtolower($code),
+                                            'password'        => bcrypt($brandData['agent_password']),
+                                            'password_string' => $brandData['agent_password'],
+                                            'user_type'       => 'agent',
+                                            'operator_id'     => $record->operator_id,
+                                            'brand_id'        => $brand->brand_id,
+                                            'client_id'       => $client->client_id,
+                                        ]);
+                                    }
 
                                     OAuthClients::create([
                                         'client_id'     => $client->client_id,
@@ -226,7 +248,7 @@ class OperatorForm
                                 ])->columnSpan(1),
                             ]),
                         Section::make('Template: Auto-Generate Clients')
-                            ->description('Fill this to auto-create clients for new brands.')
+                            ->description('Fill this to auto-create clients and agent logins for new brands.')
                             ->visible(fn ($get) => $get('brand_id') === null) 
                             ->schema([
                                 Select::make('temp_currencies')
@@ -239,6 +261,12 @@ class OperatorForm
                                     TextInput::make('temp_fund_url')->placeholder('Fund API URL')->dehydrated(true),
                                     TextInput::make('temp_check_url')->placeholder('Check API URL')->dehydrated(true),
                                 ]),
+
+                                // --- CHANGE: Added Agent fields to Template ---
+                                Section::make('Initial Agent Credentials')
+                                    ->schema(self::getUserFields('agent'))
+                                    ->columns(3)
+                                    ->compact(),
                             ]),
 
                         Repeater::make('clients')
@@ -260,10 +288,9 @@ class OperatorForm
     {
         return Tab::make('Unassigned Clients')
             ->icon('heroicon-m-exclamation-triangle')
-            // 1. Only show the tab if the operator actually has unassigned clients
             ->visible(fn ($record) => 
                 $record && $record->clients()
-                    ->where('operator_id', $record->operator_id) // Match parent operator
+                    ->where('operator_id', $record->operator_id)
                     ->where(fn ($query) => $query->whereNull('brand_id')->orWhere('brand_id', 0))
                     ->exists()
             )
@@ -273,13 +300,29 @@ class OperatorForm
                         if (!$record) {
                             return $query->whereRaw('1 = 0');
                         }
-                    
-                        return $query->where('operator_id', $record->operator_id)
-                            ->where(fn ($q) => $q->whereNull('brand_id')->orWhere('brand_id', 0));
+
+                        return $query
+                            ->where('operator_id', $record->operator_id)
+                            ->where(fn ($q) =>
+                                $q->whereNull('brand_id')
+                                ->orWhere('brand_id', 0)
+                            );
                     })
                     ->addable(false)
                     ->deletable(false)
                     ->reorderable(false)
+
+                    // 🔑 THIS IS WHAT YOU WERE MISSING
+                    ->saveRelationshipsUsing(function ($component, $state, $record) {
+                        foreach ($state as $clientData) {
+                            if (!empty($clientData['assign_brand_id'])) {
+                                \App\Models\Client::where('client_id', $clientData['client_id'])
+                                    ->update([
+                                        'brand_id' => $clientData['assign_brand_id'],
+                                    ]);
+                            }
+                        }
+                    })
                     ->schema(self::getClientFields(true))
             ]);
     }
@@ -287,59 +330,65 @@ class OperatorForm
     protected static function getClientFields(bool $showAssignment): array
     {
         return [
-            // Row 1: Identification & Assignment
             Grid::make(4)->schema([
-                TextInput::make('client_id')
-                    ->label('ID')
-                    ->disabled(),
-                TextInput::make('client_name')
-                    ->label('Client Name')
-                    ->required(),
-                TextInput::make('default_currency')
-                    ->label('Currency')
-                    ->disabled(),
-                Select::make('brand_id')
+                TextInput::make('client_id')->label('ID')->disabled(),
+                TextInput::make('client_name')->label('Client Name')->required(),
+                TextInput::make('default_currency')->label('Currency')->disabled(),
+                Select::make('assign_brand_id')
                     ->label('Assign Brand')
-                    ->options(fn($get) => Brand::where('operator_id', $get('../../operator_id'))->pluck('brand_name', 'brand_id'))
+                    ->options(fn ($get) =>
+                        Brand::where('operator_id', $get('../../operator_id'))
+                            ->pluck('brand_name', 'brand_id')
+                    )
                     ->visible($showAssignment)
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+
+                    // 🔒 Do NOT let Filament touch validation or saving
+                    ->dehydrated(false)
+                    ->rules([])
+                    ->required(false)
+
+                    // Optional UX
+                    ->placeholder('Select a brand to assign')
             ]),
 
-            // Row 2: Logic & Status
             Grid::make(3)->schema([
-                Select::make('client_line')
-                    ->options(['row' => 'ROW', 'asia' => 'Asia']),
-                Select::make('api_ver')
-                    ->label('API Version')
-                    ->options(['2.0' => '2.0', '2.1' => '2.1']),
+                Select::make('client_line')->options(['row' => 'ROW', 'asia' => 'Asia']),
+                Select::make('api_ver')->label('API Version')->options(['2.0' => '2.0', '2.1' => '2.1']),
                 ToggleButtons::make('status_id')
                     ->label('Status')
-                    ->options(['1' => 'Active', '2' => 'Disabled'])
-                    ->colors(['1' => 'success', '2' => 'danger'])
-                    ->inline(),
+                    ->options([
+                        '1' => 'Active',
+                        '2' => 'Disabled'
+                    ])
+                    ->colors([
+                        '1' => 'success', 
+                        '2' => 'danger'
+                    ])
+                    ->inline()
+                    ->default('1')
+                    // This ensures if the DB is 0, 2, or null, it highlights the "Disabled" button
+                    ->formatStateUsing(function ($state) {
+                        if ($state == 1) {
+                            return '1';
+                        }
+                        return '2'; // Default everything else to 'Disabled'
+                    })
+                    // Ensure it saves as an integer if your DB column is an integer
+                    ->dehydrateStateUsing(fn ($state) => (int) $state)
             ]),
 
-            // Row 3: API Endpoint URLs
             Grid::make(3)->schema([
-                TextInput::make('player_details_url')
-                    ->label('Player Details URL')
-                    ->url()
-                    ->placeholder('https://...'),
-                TextInput::make('fund_transfer_url')
-                    ->label('Fund Transfer URL')
-                    ->url()
-                    ->placeholder('https://...'),
-                TextInput::make('transaction_checker_url')
-                    ->label('Transaction Checker URL')
-                    ->url()
-                    ->placeholder('https://...'),
+                TextInput::make('player_details_url')->label('Player Details URL')->url(fn (string $operation): bool => $operation === 'create')->placeholder('https://...'),
+                TextInput::make('fund_transfer_url')->label('Fund Transfer URL')->url(fn (string $operation): bool => $operation === 'create')->placeholder('https://...'),
+                TextInput::make('transaction_checker_url')->label('Transaction Checker URL')->url(fn (string $operation): bool => $operation === 'create')->placeholder('https://...'),
             ]),
 
             Section::make('Agent Credentials')
                 ->description('Optional: Create/Update login for this specific client line')
                 ->collapsible()
-                ->collapsed() // Keep it hidden by default since it's not required
+                ->collapsed() 
                 ->schema(self::getUserFields('agent')) 
                 ->compact(),
         ];
@@ -349,7 +398,7 @@ class OperatorForm
     {
         return [
             TextInput::make($type . '_email')
-                ->email()
+                ->email(fn (string $operation): bool => $operation === 'create')
                 ->label('Email')
                 ->afterStateHydrated(function ($set, $record) use ($type) {
                     if (!$record) return;
