@@ -41,4 +41,31 @@ class Client extends Model
     {
         return $this->hasOne(OAuthClients::class, 'client_id', 'client_id');
     }
+
+    public function subscription()
+    {
+        return $this->hasOne(ClientGameSubscribe::class, 'client_id', 'client_id');
+    }
+    public function hasGameAccess($gameId, $subProviderId): bool
+    {
+        // 1. Check if the client even has a subscription profile
+        if (!$this->subscription) return false;
+
+        // 2. Is the Provider subscribed?
+        $providerActive = $this->subscription->subscribedProviders()
+            ->where('provider_id', $subProviderId)
+            ->where('status_id', 1)
+            ->exists();
+
+        if (!$providerActive) return false;
+
+        // 3. Is there a specific block (Exclusion) on this game?
+        $gameStatus = $this->subscription->subscribedGames()
+            ->where('game_id', $gameId)
+            ->first();
+
+        // If no specific game row exists, they have access because the provider is active.
+        // If a row exists, we follow the status_id (0 = blocked, 1 = allowed).
+        return $gameStatus ? (bool)$gameStatus->status_id : true;
+    }
 }

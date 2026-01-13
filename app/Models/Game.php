@@ -29,6 +29,11 @@ class Game extends Model
     {
         return $this->belongsTo(SubProvider::class, 'sub_provider_id', 'sub_provider_id');
     }
+
+    public function gameSubscriptions()
+    {
+        return $this->hasMany(SubscribeGame::class, 'game_id', 'game_id');
+    }
 }   
 
  

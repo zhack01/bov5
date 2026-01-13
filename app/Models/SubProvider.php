@@ -56,4 +56,10 @@ class SubProvider extends Model
     {
         return $this->belongsTo(Provider::class, 'provider_id', 'provider_id');
     }
+
+    public function subscriptions()
+    {
+        // This allows us to check if a provider is linked to any CGS record
+        return $this->hasMany(SubscribeProvider::class, 'provider_id', 'sub_provider_id');
+    }
 }
