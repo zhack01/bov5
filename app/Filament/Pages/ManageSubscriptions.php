@@ -3,19 +3,14 @@
 namespace App\Filament\Pages;
 
 use App\Models\Client;
-use App\Models\Game;
 use App\Models\Operator;
 use App\Models\SubProvider;
-use App\Models\SubscribeGame;
-use App\Models\SubscribeProvider;
 use BackedEnum;
+use UnitEnum;
 use Filament\Actions\Action;
-use Filament\Actions\BulkAction;
-use Filament\Actions\BulkActionGroup;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema; 
 use Filament\Support\Icons\Heroicon;
@@ -23,16 +18,17 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
-use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
+use App\Filament\Pages\BulkSubscribe;
 
 class ManageSubscriptions extends Page implements HasForms, HasTable
 {
     use InteractsWithForms;
     use InteractsWithTable;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::Key;
+    protected static string | BackedEnum |null $navigationIcon = Heroicon::Star;
+    protected static string | UnitEnum | null $navigationGroup = 'Client Management';
     protected string $view = 'filament.pages.manage-subscriptions';
 
     public ?array $data = [];
@@ -41,6 +37,17 @@ class ManageSubscriptions extends Page implements HasForms, HasTable
     public function mount(): void
     {
         $this->form->fill();
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('goToBulk')
+                ->label('Go to Bulk Subscribe')
+                ->icon('heroicon-m-plus')
+                ->color('gray')
+                ->url(fn () => BulkSubscribe::getUrl()),
+        ];
     }
 
     protected function getTables(): array
@@ -126,6 +133,7 @@ class ManageSubscriptions extends Page implements HasForms, HasTable
                     ->label('Subscribed')
                     ->onColor('success')
                     ->offColor('gray')
+                    ->sortable()
                     ->updateStateUsing(function ($record, $state) {
                         $clientId = $this->data['client_id'] ?? null;
                         if (!$clientId) return;

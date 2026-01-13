@@ -3,8 +3,6 @@
 namespace App\Livewire;
 
 use App\Models\Game;
-use App\Models\Client;
-use App\Models\SubscribeGame;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Actions\Concerns\InteractsWithActions; 
@@ -48,6 +46,7 @@ class GameExclusionManager extends Component implements HasForms, HasTable, HasA
                     ->label('Subscribed')
                     ->onColor('success')
                     ->offColor('gray')
+                    ->sortable()
                     ->getStateUsing(fn ($record) => (bool) $record->is_recorded)
                     ->updateStateUsing(function ($record, $state) {
                         $cgs = \App\Models\ClientGameSubscribe::firstOrCreate(['client_id' => $this->clientId]);
