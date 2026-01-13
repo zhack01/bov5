@@ -29,6 +29,8 @@ class ManageSubscriptions extends Page implements HasForms, HasTable
 
     protected static string | BackedEnum |null $navigationIcon = Heroicon::Star;
     protected static string | UnitEnum | null $navigationGroup = 'Client Management';
+    protected static ?string $navigationLabel = 'Subscription List';
+    protected static ?string $pluralModelLabel = 'Subscription List';
     protected string $view = 'filament.pages.manage-subscriptions';
 
     public ?array $data = [];

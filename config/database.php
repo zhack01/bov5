@@ -63,6 +63,26 @@ return [
             ]) : [],
         ],
 
+        'bo_aggreagate' => [
+            'driver' => 'mysql',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST_AGGREGATE', '127.0.0.1'),
+            'port' => env('DB_PORT_AGGREGATE', '3306'),
+            'database' => env('DB_DATABASE_AGGREGATE', 'laravel'),
+            'username' => env('DB_USERNAME_AGGREGATE', 'root'),
+            'password' => env('DB_PASSWORD_AGGREGATE', ''),
+            'unix_socket' => env('DB_SOCKET_AGGREGATE', ''),
+            'charset' => env('DB_CHARSET_AGGREGATE', 'utf8mb4'),
+            'collation' => env('DB_COLLATION_AGGREGATE', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
