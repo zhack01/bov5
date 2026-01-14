@@ -15,42 +15,43 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
+
                 TextColumn::make('email')
                     ->label('Email address')
-                    ->searchable(),
-                TextColumn::make('phone')
-                    ->numeric()
+                    ->searchable()
                     ->sortable(),
-                TextColumn::make('is_admin')
+
+                TextColumn::make('roles.name')
+                    ->label('Role')
+                    ->badge()
+                    ->color('info')
                     ->searchable(),
+
+                TextColumn::make('phone')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('status_id')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        '1' => 'success',
+                        '0' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state) => $state == 1 ? 'Active' : 'Inactive')
+                    ->sortable(),
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('operator_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('client_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('brand_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('status_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('status')
-                    ->numeric()
-                    ->sortable(),
             ])
             ->filters([
                 //

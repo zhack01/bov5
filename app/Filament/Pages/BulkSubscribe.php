@@ -7,6 +7,7 @@ use App\Models\ClientGameSubscribe;
 use App\Models\Operator;
 use App\Models\SubProvider;
 use BackedEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -19,7 +20,7 @@ use UnitEnum;
 
 class BulkSubscribe extends Page
 {
-    use InteractsWithForms;
+    use InteractsWithForms, HasPageShield;
 
     // These ones SHOULD be static
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrow-path-rounded-square';

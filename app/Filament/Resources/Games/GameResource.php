@@ -15,7 +15,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class GameResource extends Resource
+class GameResource extends Resource 
 {
     protected static ?string $model = Game::class;
 

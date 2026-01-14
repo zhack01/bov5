@@ -8,6 +8,7 @@ use App\Models\Operator;
 use App\Models\Round;
 use App\Traits\HasTransactionDetails;
 use BackedEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -29,7 +30,7 @@ use UnitEnum;
 
 class GameReport extends Page implements HasForms, HasTable
 {
-    use InteractsWithForms, InteractsWithTable, HasTransactionDetails;
+    use InteractsWithForms, InteractsWithTable, HasTransactionDetails, HasPageShield;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::ListBullet;
     protected static string|UnitEnum|null $navigationGroup = 'Reports';

@@ -2,11 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\BulkSubscribe;
 use App\Models\Client;
 use App\Models\Operator;
 use App\Models\SubProvider;
 use BackedEnum;
-use UnitEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -20,12 +21,11 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
-use App\Filament\Pages\BulkSubscribe;
+use UnitEnum;
 
 class ManageSubscriptions extends Page implements HasForms, HasTable
 {
-    use InteractsWithForms;
-    use InteractsWithTable;
+    use InteractsWithForms, InteractsWithTable, HasPageShield;
 
     protected static string | BackedEnum |null $navigationIcon = Heroicon::Star;
     protected static string | UnitEnum | null $navigationGroup = 'Client Management';

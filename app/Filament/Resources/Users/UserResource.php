@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class UserResource extends Resource
 {
@@ -21,6 +22,19 @@ class UserResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    /**
+     * This filters the database so ONLY custom users are shown.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+        ->where(function ($query) {
+            $query->whereNotIn('user_type', ['operator', 'brands', 'agent'])
+                  ->orWhereNull('user_type')
+                  ->orWhere('user_type', '');
+        });
+    }
 
     public static function form(Schema $schema): Schema
     {
