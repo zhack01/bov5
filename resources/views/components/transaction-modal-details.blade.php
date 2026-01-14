@@ -63,9 +63,11 @@
 
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px; background: var(--tm-bg-card); border: 1px solid var(--tm-border); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             <div>
-                <p style="margin: 0; font-size: 11px; font-weight: 700; color: var(--tm-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Report Win</p>
-                <p style="margin: 4px 0 0 0; font-size: 28px; font-weight: 800; color: {{ $syncPayout ? '#fb7185' : 'var(--tm-text-main)' }};">
-                    {{ number_format($record->win, 2) }}
+                <p style="margin: 0; font-size: 11px; font-weight: 700; color: var(--tm-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                    Report Win
+                </p>
+                <p style="margin: 4px 0 0 0; font-size: 28px; font-weight: 800; color: {{ $syncPayout ? '#fb7185' : '#10b981' }};">
+                    {{ number_format($displayWin ?? $record->win, 2) }}
                 </p>
             </div>
             <div style="padding: 10px; background: {{ $syncPayout ? 'rgba(244, 63, 94, 0.1)' : 'rgba(148, 163, 184, 0.1)' }}; border-radius: 10px;">
@@ -122,12 +124,51 @@
     <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
         <button 
             type="button"
+            {{-- When clicked, wait for the server response, then find the close button and click it --}}
             wire:click.stop="syncAmount('{{ $record->round_id }}', {{ $total }})"
-            style="cursor: pointer; background: #d97706; color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px;"
+            x-on:click="
+                setTimeout(() => {
+                    let closeBtn = $el.closest('.fi-modal').querySelector('.fi-modal-close-btn');
+                    if (closeBtn) closeBtn.click();
+                    // Fallback for older Filament versions
+                    let cancelBtn = document.querySelector('.fi-modal-footer button[color=\'gray\']');
+                    if (cancelBtn) cancelBtn.click();
+                }, 1000)
+            "
+            wire:loading.attr="disabled"
+            style="cursor: pointer; background: #f59e0b; color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+            onmouseover="this.style.background='#d97706'" 
+            onmouseout="this.style.background='#f59e0b'"
+            wire:loading.class="opacity-70 cursor-not-allowed"
         >
-            <x-heroicon-m-arrow-path style="width: 16px; height: 16px;" />
-            Sync Payout
+            <x-heroicon-m-arrow-path 
+                style="width: 16px; height: 16px;" 
+                wire:loading.class="animate-spin" 
+                wire:target="syncAmount" 
+            />
+            
+            <span wire:loading.remove wire:target="syncAmount">
+                Sync Report Win to Extension Total
+            </span>
+            
+            <span wire:loading wire:target="syncAmount">
+                Syncing...
+            </span>
         </button>
     </div>
     @endif
+    {{-- Add this small style block if your project doesn't have Tailwind's animate-spin --}}
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        .opacity-70 {
+            opacity: 0.7;
+        }
+    </style>
+    
 </div>
