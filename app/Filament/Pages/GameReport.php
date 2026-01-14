@@ -6,8 +6,8 @@ use App\Models\Client;
 use App\Models\Currency;
 use App\Models\Operator;
 use App\Models\Round;
+use App\Traits\HasTransactionDetails;
 use BackedEnum;
-use Carbon\CarbonPeriod;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -22,14 +22,14 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
 use UnitEnum;
 
 class GameReport extends Page implements HasForms, HasTable
 {
-    use InteractsWithForms;
-    use InteractsWithTable;
+    use InteractsWithForms, InteractsWithTable, HasTransactionDetails;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::ListBullet;
     protected static string|UnitEnum|null $navigationGroup = 'Reports';
@@ -150,8 +150,21 @@ class GameReport extends Page implements HasForms, HasTable
                         })
                         ->placeholder('Search by Name, ID, or Client ID...'),
 
-                        DatePicker::make('date_start')->label('From')->required(),
-                        DatePicker::make('date_end')->label('To')->required(),
+                        DatePicker::make('date_start')
+                            ->label('From')
+                            ->required()
+                            ->live() // Essential: tells Filament to watch for changes
+                            ->afterStateUpdated(function ($state, $set) {
+                                // $state is the new value of date_start
+                                // $set allows us to update other fields in the form
+                                if ($state) {
+                                    $set('date_end', $state);
+                                }
+                            }),
+                        
+                        DatePicker::make('date_end')
+                            ->label('To')
+                            ->required(),
 
                         Select::make('outcome')
                             ->options([
@@ -199,6 +212,7 @@ class GameReport extends Page implements HasForms, HasTable
                         'per_round.bet',
                         'per_round.win',
                         'per_round.client_id',
+                        'per_round.operator_id',
                         'clients.client_name',
                         'clients.default_currency as currency_code',
                         // CORRECTED SELECTS:
@@ -246,7 +260,33 @@ class GameReport extends Page implements HasForms, HasTable
             })
             ->columns([
                 TextColumn::make('created_at')->label('Time')->dateTime()->sortable(),
-                TextColumn::make('round_id')->label('Round ID')->searchable(),
+                TextColumn::make('round_id')
+                    ->label('Round ID')
+                    ->searchable()
+                    ->color('primary')
+                    ->extraAttributes(['class' => 'font-mono text-primary-600 cursor-pointer underline'])
+                    ->action(
+                        Action::make('view_details')
+                            ->modalHeading(fn ($record) => "Transaction Details: " . $record->round_id)
+                            ->modalWidth('7xl')
+                            ->modalSubmitAction(false)
+                            ->modalContent(function ($record) {
+                                // 1. Get the data from the Trait
+                                $data = array_merge(['record' => $record], $this->fetchExtensionData($record));
+                
+                                // 2. Render the component to a string
+                                $html = Blade::render('
+                                    <x-transaction-modal-details 
+                                        :record="$record" 
+                                        :transactions="$transactions" 
+                                        :total="$total" 
+                                        :sync-payout="$syncPayout" 
+                                    />', $data);
+                
+                                // 3. Wrap it in HtmlString to satisfy the Type Hint
+                                return new HtmlString($html);
+                            })
+                    ),
                 TextColumn::make('client_name')->label('Client'),
                 
                 // USE THE ALIASES FROM THE SELECT
@@ -287,5 +327,18 @@ class GameReport extends Page implements HasForms, HasTable
                     }),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public function syncAmount($roundId, $amount)
+    {
+        DB::connection('bo_aggreagate') 
+            ->table('per_round')
+            ->where('round_id', $roundId)
+            ->update(['win' => $amount]);
+
+        \Filament\Notifications\Notification::make()
+            ->title('Successfully Synced')
+            ->success()
+            ->send();
     }
 }
