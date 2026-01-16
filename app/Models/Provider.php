@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Provider extends Model
 {
-
+    protected $connection = 'mysql'; 
     protected $table = 'providers';
     protected $primaryKey = 'provider_id';
 

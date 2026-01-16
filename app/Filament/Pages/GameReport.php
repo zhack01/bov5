@@ -35,6 +35,7 @@ class GameReport extends Page implements HasForms, HasTable
     protected static string|BackedEnum|null $navigationIcon = Heroicon::ListBullet;
     protected static string|UnitEnum|null $navigationGroup = 'Reports';
     protected string $view = 'filament.pages.game-report';
+    protected static ?int $navigationSort = 6;
 
     public ?array $data = [
         'operator_id' => null,

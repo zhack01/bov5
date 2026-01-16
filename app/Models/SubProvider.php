@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SubProvider extends Model
 {
+    protected $connection = 'mysql'; 
     protected $table = 'sub_providers';
     protected $primaryKey = 'sub_provider_id';
 

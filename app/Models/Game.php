@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Game extends Model
 {
+    protected $connection = 'mysql'; 
     protected $primaryKey = 'game_id';
 
     protected $fillable = [
