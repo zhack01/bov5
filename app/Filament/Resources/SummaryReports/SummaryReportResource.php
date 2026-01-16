@@ -60,9 +60,9 @@ class SummaryReportResource extends Resource
                 MAX(per_player.created_at) as created_at,
                 SUM(per_player.bet) as bet,
                 SUM(per_player.win) as win,
-                SUM(per_player.ggr) as ggr,
+                (SUM(per_player.bet) - SUM(per_player.win)) as total_ggr,
                 SUM(per_player.total_rounds) as rounds,
-                (SUM(per_player.bet) - SUM(per_player.win)) as total_ggr
+                COUNT(Distinct per_player.player_id) as players
             ")
             ->groupBy([
                 'o.client_name',
