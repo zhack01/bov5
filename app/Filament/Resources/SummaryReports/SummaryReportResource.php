@@ -20,7 +20,11 @@ class SummaryReportResource extends Resource
 {
     protected static ?string $model = SummaryReport::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::PresentationChartLine;
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Reports';
+
+    protected static ?int $navigationSort = 7;
 
     public static function form(Schema $schema): Schema
     {
@@ -32,48 +36,48 @@ class SummaryReportResource extends Resource
         return SummaryReportsTable::configure($table);
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        // Start fresh
-        $query = parent::getEloquentQuery();
+    // public static function getEloquentQuery(): Builder
+    // {
+    //     // Start fresh
+    //     $query = parent::getEloquentQuery();
         
-        // Clear the default "select *" columns and groups
-        $query->getQuery()->columns = null;
-        $query->getQuery()->groups = null;
+    //     // Clear the default "select *" columns and groups
+    //     $query->getQuery()->columns = null;
+    //     $query->getQuery()->groups = null;
 
-        return $query->from('bo_aggreagate.per_player')
-            ->leftJoin('mwapiv2_main.operator as o', 'per_player.operator_id', '=', 'o.operator_id')
-            ->leftJoin('mwapiv2_main.clients as c', 'per_player.client_id', '=', 'c.client_id')
-            ->leftJoin('mwapiv2_main.sub_providers as sp', 'per_player.provider_id', '=', 'sp.sub_provider_id')
-            ->leftJoin('mwapiv2_main.providers as pr', 'sp.provider_id', '=', 'pr.provider_id')
-            ->leftJoin('mwapiv2_main.games as g', 'per_player.game_id', '=', 'g.game_id')
-            ->select([
-                // 'per_player.per_player_id',
-                'o.client_name as operator',
-                'c.client_name as client',
-                'pr.provider_name as partner',
-                'sp.sub_provider_name as provider',
-                'g.game_name',
-                'c.default_currency as currency',
-            ])
-            ->selectRaw("
-                MAX(per_player.created_at) as created_at,
-                SUM(per_player.bet) as bet,
-                SUM(per_player.win) as win,
-                (SUM(per_player.bet) - SUM(per_player.win)) as total_ggr,
-                SUM(per_player.total_rounds) as rounds,
-                COUNT(Distinct per_player.player_id) as players
-            ")
-            ->groupBy([
-                'o.client_name',
-                'c.client_name',
-                'pr.provider_name',
-                'sp.sub_provider_name',
-                'g.game_name',
-                'c.default_currency',
-            ]);
+    //     return $query->from('bo_aggreagate.per_player')
+    //         ->leftJoin('mwapiv2_main.operator as o', 'per_player.operator_id', '=', 'o.operator_id')
+    //         ->leftJoin('mwapiv2_main.clients as c', 'per_player.client_id', '=', 'c.client_id')
+    //         ->leftJoin('mwapiv2_main.sub_providers as sp', 'per_player.provider_id', '=', 'sp.sub_provider_id')
+    //         ->leftJoin('mwapiv2_main.providers as pr', 'sp.provider_id', '=', 'pr.provider_id')
+    //         ->leftJoin('mwapiv2_main.games as g', 'per_player.game_id', '=', 'g.game_id')
+    //         ->select([
+    //             // 'per_player.per_player_id',
+    //             'o.client_name as operator',
+    //             'c.client_name as client',
+    //             'pr.provider_name as partner',
+    //             'sp.sub_provider_name as provider',
+    //             'g.game_name',
+    //             'c.default_currency as currency',
+    //         ])
+    //         ->selectRaw("
+    //             MAX(per_player.created_at) as created_at,
+    //             SUM(per_player.bet) as bet,
+    //             SUM(per_player.win) as win,
+    //             (SUM(per_player.bet) - SUM(per_player.win)) as total_ggr,
+    //             SUM(per_player.total_rounds) as rounds,
+    //             COUNT(Distinct per_player.player_id) as players
+    //         ")
+    //         ->groupBy([
+    //             'o.client_name',
+    //             'c.client_name',
+    //             'pr.provider_name',
+    //             'sp.sub_provider_name',
+    //             'g.game_name',
+    //             'c.default_currency',
+    //         ]);
 
-    }
+    // }
 
     public static function getRelations(): array
     {

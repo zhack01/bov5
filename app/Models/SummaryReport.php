@@ -11,13 +11,15 @@ class SummaryReport extends Model
     
     // Use a REAL column here so the auto-generated ORDER BY works
     protected $primaryKey = 'per_player_id';
-    protected $keyType = 'integer';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
      // VERY IMPORTANT 👇
      public $timestamps = false;
 
     // Auto-load names to avoid empty columns
-    protected $with = ['operators', 'clients', 'providers', 'games'];
+    // protected $with = ['operators', 'clients', 'providers', 'games'];
+    
     public function operators() { return $this->belongsTo(Operator::class, 'operator_id', 'operator_id'); }
     public function clients() { return $this->belongsTo(Client::class, 'client_id', 'client_id'); }
     public function providers() { return $this->belongsTo(SubProvider::class, 'provider_id', 'sub_provider_id'); }

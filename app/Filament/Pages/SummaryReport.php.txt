@@ -23,7 +23,7 @@ class SummaryReport extends Page implements HasTable
     use InteractsWithTable;
 
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::PresentationChartLine;
-    protected static string|\UnitEnum|null $navigationGroup = 'Reports';
+    // protected static string|\UnitEnum|null $navigationGroup = 'Reports';
     protected string $view = 'filament.pages.summary-report';
 
     public ?array $data = [];

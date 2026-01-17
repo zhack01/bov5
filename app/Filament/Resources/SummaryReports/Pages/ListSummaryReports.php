@@ -22,15 +22,15 @@ class ListSummaryReports extends ListRecords
      */
     public function getTableRecordKey($record): string
     {
-        // Generating a unique ID from the grouped data
-        return md5($record->operator . $record->client . $record->game_name . $record->currency);
+        // Use the alias from your query
+        return (string) $record->per_player_id;
     }
 
     /**
      * Prevents the GroupBy from breaking the row count.
      */
-    protected function paginateTableQuery(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Contracts\Pagination\Paginator
-    {
-        return $query->simplePaginate($this->getTableRecordsPerPage());
-    }
+    // protected function paginateTableQuery(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Contracts\Pagination\Paginator
+    // {
+    //     return $query->simplePaginate($this->getTableRecordsPerPage());
+    // }
 }
