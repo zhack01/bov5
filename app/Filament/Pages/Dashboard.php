@@ -18,8 +18,8 @@ class Dashboard extends BaseDashboard
             ->components([
                 Section::make()
                     ->schema([
-                        DatePicker::make('startDate'),
-                        DatePicker::make('endDate'),
+                        DatePicker::make('startDate')->default(now()),
+                        DatePicker::make('endDate')->default(now()),
                     ])
                     ->columns(3)
                     ->columnSpanFull(),

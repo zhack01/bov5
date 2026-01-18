@@ -23,7 +23,7 @@ class GameResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::RocketLaunch;
 
-    protected static ?string $recordTitleAttribute = 'name';
+    // protected static ?string $recordTitleAttribute = 'name';
 
     protected static ?int $navigationSort = 2;
 

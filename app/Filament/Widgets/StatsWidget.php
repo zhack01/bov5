@@ -24,6 +24,11 @@ class StatsWidget extends StatsOverviewWidget
         // 1. Capture Filters (with fallbacks to today or month)
         $start = $this->pageFilters['startDate'] ?? now()->startOfMonth()->toDateString();
         $end = $this->pageFilters['endDate'] ?? now()->toDateString();
+        $today = now()->toDateString();
+
+        // Database Names from Config
+        $dbAggregate = config('database.connections.bo_aggreagate.database');
+        $dbMain      = config('database.connections.mysql.database');
 
         // ---------------------------------------------------------
         // STAT 1: Total Players in Range
@@ -49,28 +54,34 @@ class StatsWidget extends StatsOverviewWidget
             ->toArray();
 
         // ---------------------------------------------------------
-        // STAT 3: Total Bets (USD) in Range
+        // STAT 3: Total Bets (Split Logic: per_round vs per_player)
         // ---------------------------------------------------------
-        // Logic: Use per_round for the most recent data (today) and per_player for history
-        $today = now()->toDateString();
         
-        $totalBetsUsd = DB::table('bo_aggreagate.per_round')
-            ->join('mwapiv2_main.clients', 'per_round.client_id', '=', 'clients.client_id')
-            ->join('mwapiv2_main.currency_rates', 'clients.default_currency', '=', 'currency_rates.currency_code')
-            ->whereBetween('per_round.date', [$start, $end])
-            ->selectRaw('SUM(per_round.bet / FORMAT(currency_rates.exchange_rate,4)) as total_usd')
-            ->value('total_usd') ?? 0;
+        // Query Part A: Today's data from per_round
+        $todayQuery = DB::table("{$dbAggregate}.per_round as pr")
+            ->selectRaw("DATE(pr.date) as date, SUM(pr.bet / cr.exchange_rate) as daily_usd")
+            ->join("{$dbMain}.clients as c", 'pr.client_id', '=', 'c.client_id')
+            ->join("{$dbMain}.currency_rates as cr", 'c.default_currency', '=', 'cr.currency_code')
+            ->where('pr.date', $today)
+            ->whereBetween('pr.date', [$start, $end]) // Respect user filter if today is included
+            ->groupBy('date');
 
-        // Chart Data for Bets
-        $betsChart = DB::table('bo_aggreagate.per_round')
-            ->selectRaw('date, SUM(bet / FORMAT(exchange_rate,4)) as daily_usd')
-            ->join('mwapiv2_main.clients', 'per_round.client_id', '=', 'clients.client_id')
-            ->join('mwapiv2_main.currency_rates', 'clients.default_currency', '=', 'currency_rates.currency_code')
-            ->whereBetween('per_round.date', [$start, $end])
-            ->groupBy('date')
+        // Query Part B: Historical data from per_player
+        $historyQuery = DB::table("{$dbAggregate}.per_player as pp")
+            ->selectRaw("DATE(pp.created_at) as date, SUM(pp.bet / cr.exchange_rate) as daily_usd")
+            ->join("{$dbMain}.clients as c", 'pp.client_id', '=', 'c.client_id')
+            ->join("{$dbMain}.currency_rates as cr", 'c.default_currency', '=', 'cr.currency_code')
+            ->where('pp.created_at', '<', $today) // Strictly before today
+            ->whereBetween('pp.created_at', [$start . ' 00:00:00', $end . ' 23:59:59'])
+            ->groupBy('date');
+
+        // Combine for Chart and Total
+        $combinedResults = $todayQuery->unionAll($historyQuery)
             ->orderBy('date')
-            ->pluck('daily_usd')
-            ->toArray();
+            ->get();
+
+        $totalBetsUsd = $combinedResults->sum('daily_usd');
+        $betsChart = $combinedResults->pluck('daily_usd')->toArray();
 
         return [
             Stat::make('Total Players', number_format($playersCount))
