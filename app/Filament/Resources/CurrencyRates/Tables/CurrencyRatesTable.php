@@ -13,12 +13,15 @@ class CurrencyRatesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 TextColumn::make('currency_code')
                     ->sortable(),
                 TextColumn::make('exchange_rate')
                     ->sortable(),
                 TextColumn::make('base_currency')
+                    ->sortable(),
+                TextColumn::make('last_updated_at')
                     ->sortable(),
             ])
             ->filters([

@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Filament\Widgets;
+
+use App\Models\Round;
+use Filament\Actions\BulkActionGroup;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
+use Filament\Widgets\TableWidget;
+use Illuminate\Database\Eloquent\Builder;
+
+class CurrencyBetTable extends TableWidget
+{
+    use InteractsWithPageFilters;
+
+    protected static ?string $heading = 'Currency Performance (USD)';
+
+    protected static ?int $sort = 3;
+
+    protected bool $isCollapsible = true;
+
+    public function table(Table $table): Table
+    {
+        $start = $this->pageFilters['startDate'] ?? now()->startOfMonth()->toDateString();
+        $end = $this->pageFilters['endDate'] ?? now()->toDateString();
+
+        return $table
+            ->query(fn (): Builder => Round::query()
+                ->join('mwapiv2_main.clients as c', 'per_round.client_id', '=', 'c.client_id')
+                ->join('mwapiv2_main.currency_rates as cr', 'c.default_currency', '=', 'cr.currency_code')
+                ->selectRaw('per_round.round_id, c.default_currency as currency, SUM(per_round.bet / cr.exchange_rate) as total_bet_usd')
+                // ->where('per_round.date', now()->toDateString())
+                ->whereBetween('per_round.date', [$start, $end])
+                // ->whereMonth('per_round.date', now()->month)
+                ->groupBy('c.default_currency')
+                ->orderBy("total_bet_usd", "desc")
+            )
+            ->columns([
+                TextColumn::make('index')
+                    ->label('#')
+                    ->rowIndex()
+                    ->alignCenter()
+                    ->width('50px'),
+                TextColumn::make('currency')->badge()->color('primary')->alignCenter(),
+                TextColumn::make('total_bet_usd')->money()->alignRight()->color('success'),
+            ])
+            ->defaultPaginationPageOption(10)
+            ->filters([
+                //
+            ])
+            ->headerActions([
+                //
+            ])
+            ->recordActions([
+                //
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    //
+                ]),
+            ]);
+    }
+}

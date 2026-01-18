@@ -15,6 +15,7 @@ class ProvidersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 TextColumn::make('provider.provider_id')
                     ->label('PartnerId')

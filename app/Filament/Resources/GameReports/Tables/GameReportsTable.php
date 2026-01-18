@@ -27,6 +27,7 @@ class GameReportsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 TextColumn::make('created_at')->label('Date Time')->sortable(),
                 TextColumn::make('round_id')

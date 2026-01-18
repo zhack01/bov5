@@ -20,6 +20,7 @@ class GamesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 TextColumn::make('gameType.game_type_name')
                     ->label('Game Type')
