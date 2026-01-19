@@ -25,7 +25,7 @@ class GameReportResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Reports';
     
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 41;
 
     public static function form(Schema $schema): Schema
     {

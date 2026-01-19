@@ -25,7 +25,7 @@ class OperatorResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 31;
 
     public static function form(Schema $schema): Schema
     {

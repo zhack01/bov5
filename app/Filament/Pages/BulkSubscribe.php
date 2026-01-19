@@ -26,7 +26,7 @@ class BulkSubscribe extends Page
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrow-path-rounded-square';
     protected static string | UnitEnum | null $navigationGroup = 'Client Management';
     protected static ?string $navigationLabel = 'Bulk Subscriptions';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 33;
 
     // THIS ONE MUST NOT BE STATIC (Remove 'static')
     protected string $view = 'filament.pages.bulk-subscribe';

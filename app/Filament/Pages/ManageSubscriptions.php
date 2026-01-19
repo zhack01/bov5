@@ -32,7 +32,7 @@ class ManageSubscriptions extends Page implements HasForms, HasTable
     protected static ?string $navigationLabel = 'Subscription List';
     protected static ?string $pluralModelLabel = 'Subscription List';
     protected string $view = 'filament.pages.manage-subscriptions';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 32;
 
     public ?array $data = [];
     public $selectedProviderId = null;

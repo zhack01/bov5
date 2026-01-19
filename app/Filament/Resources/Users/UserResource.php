@@ -26,7 +26,7 @@ class UserResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 100;
 
     /**
      * This filters the database so ONLY custom users are shown.

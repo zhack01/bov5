@@ -1,27 +1,27 @@
 <?php
 
-namespace App\Filament\Resources\GameReports\Tables;
+namespace App\Filament\Resources\TransactionMonitorings\Tables;
 
 use App\Models\Client;
 use App\Models\Currency;
 use App\Models\Operator;
+use App\Traits\HasTransactionDetails;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\View\Components\TextComponent;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
-use App\Traits\HasTransactionDetails;
 
-class GameReportsTable
+class TransactionMonitoringsTable
 {
-
     use HasTransactionDetails;
 
     public static function configure(Table $table): Table
@@ -32,7 +32,15 @@ class GameReportsTable
                 TextColumn::make('created_at')
                     ->label('Date & Time')
                     ->dateTime('M j, Y') 
-                    ->description(fn ($record) => $record->created_at->format('H:i:s')) 
+                    ->description(function ($record): HtmlString {
+                        return new HtmlString(
+                            $record->created_at->format('H:i:s') . ' <br> ' . 
+                            '<span class="text-xs font-medium text-primary-600">' . 
+                                $record->created_at->diffForHumans(['parts' => 2]) . 
+                            '</span>'
+                        );
+                    })
+                    ->html() // Required to render the <br> and <span>
                     ->sortable()
                     ->color('gray')
                     ->alignLeft(),
@@ -68,51 +76,49 @@ class GameReportsTable
                 
                 TextColumn::make('operators.client_name')->label('Operator')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('clients.client_name')->label('Client')->sortable()->toggleable(isToggledHiddenByDefault: false),
-
                 TextColumn::make('partners.provider_name')
-                ->label('Partner')
-                ->toggleable(isToggledHiddenByDefault: true),
+                    ->label('Partner')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('providers.sub_provider_name')
-                ->label('Provider')
-                ->sortable()
-                ->toggleable()
-                ->description(function (TextColumn $column, $record): ?string {
-                    // Access the table from the column and check if 'Partner' is visible
-                    $isPartnerVisible = $column->getTable()->getColumn('partners.provider_name')->getRecord();
-                    
-                    if (! $isPartnerVisible) {
-                        return "PN: " . ($record->partners?->provider_name ?? 'N/A');
-                    }
-                    
-                    return null;
-                }),
+                    ->label('Provider')
+                    ->sortable()
+                    ->toggleable()
+                    ->description(function (TextColumn $column, $record): ?string {
+                        // Access the table from the column and check if 'Partner' is visible
+                        $isPartnerVisible = $column->getTable()->getColumn('partners.provider_name')->getRecord();
+                        
+                        if (! $isPartnerVisible) {
+                            return "PN: " . ($record->partners?->provider_name ?? 'N/A');
+                        }
+                        
+                        return null;
+                    }),
 
                 TextColumn::make('games.game_name')
-                ->label('Game')
-                ->sortable()
-                ->description(function (TextColumn $column, $record): ?HtmlString {
-                    $table = $column->getTable();
-                    
-                    $isPartnerVisible = $table->getColumn('partners.provider_name')->getRecord();
-                    $isProviderVisible = $table->getColumn('providers.sub_provider_name')->getRecord();
-                    
-                    if (! $isPartnerVisible && ! $isProviderVisible) {
-                        return new HtmlString(
-                            "PN: " . ($record->partners?->provider_name ?? 'N/A') . "<br>" .
-                            "PV: " . ($record->providers?->sub_provider_name ?? 'N/A')
-                        );
-                    }
+                    ->label('Game')
+                    ->sortable()
+                    ->description(function (TextColumn $column, $record): ?HtmlString {
+                        $table = $column->getTable();
+                        
+                        $isPartnerVisible = $table->getColumn('partners.provider_name')->getRecord();
+                        $isProviderVisible = $table->getColumn('providers.sub_provider_name')->getRecord();
+                        
+                        if (! $isPartnerVisible && ! $isProviderVisible) {
+                            return new HtmlString(
+                                "PN: " . ($record->partners?->provider_name ?? 'N/A') . "<br>" .
+                                "PV: " . ($record->providers?->sub_provider_name ?? 'N/A')
+                            );
+                        }
 
-                    if (! $isProviderVisible) {
-                        return new HtmlString(
-                            "PV: " . ($record->providers?->sub_provider_name ?? 'N/A')
-                        );
-                    }
-            
-                    return null;
-                }),
-
+                        if (! $isProviderVisible) {
+                            return new HtmlString(
+                                "PV: " . ($record->providers?->sub_provider_name ?? 'N/A')
+                            );
+                        }
+                
+                        return null;
+                    }),
                 TextColumn::make('players.player_id')
                     ->label('Player')
                     ->sortable()
@@ -122,6 +128,8 @@ class GameReportsTable
                             'CP ID: ' . $record->players?->client_player_id
                         );
                     }),
+
+
                 TextColumn::make('clients.default_currency')->label('Currency'),
 
                 TextColumn::make('bet')
@@ -249,31 +257,40 @@ class GameReportsTable
                                             $set('date_end', $state);
                                         }
                                     })
+                                    // Default to today's date instead of just the day number
                                     ->default(fn () => now()->toDateString()),
                                 
                                 DatePicker::make('date_end')
                                     ->label('To')
-                                    ->required()
                                     ->default(fn () => now()->toDateString()),
 
                                 Select::make('outcome')
                                     ->options([
                                         'all' => 'All',
-                                        '1' => 'Lose',
-                                        '2' => 'Win',
                                         '3' => 'Progressing',
                                         '4' => 'Refund',
                                         '5' => 'Failed',
-                                    ])->default('all'),
+                                    ])->default('3'),
 
                                 Select::make('currency')
                                     ->label('Convert To')
                                     ->options(Currency::pluck('code', 'code'))
                                     ->placeholder('Default Currency'),
+
+                                TextInput::make('search_round_id')
+                                    ->label('Round ID')
+                                    ->placeholder('Enter specific Round ID...'),
+
                             ])->columns(4)
                     ])
                     ->query(function ($query, array $data) {
+                        if (! empty($data['search_round_id'])) {
+                            return $query->where('round_id', $data['search_round_id']);
+                        }
+
                         return $query
+                            ->whereRaw("outcome <> 1")
+                            ->whereRaw("outcome <> 2")
                             ->when($data['operator_id'], fn($q) => $q->where('operator_id', $data['operator_id']))
                             ->when($data['client_id'], fn($q) => $q->where('client_id', $data['client_id']))
                             ->when($data['provider_id'], fn($q) => $q->where('provider_id', $data['provider_id']))
@@ -281,8 +298,8 @@ class GameReportsTable
                             ->when($data['game_id'], fn($q) => $q->where('game_id', $data['game_id']))
                             ->when($data['player_id'], fn($q) => $q->where('player_id', $data['player_id']))
                             // Handle Date Range
-                            ->when($data['date_start'], fn($q) => $q->whereDate('created_at', '>=', $data['date_start']))
-                            ->when($data['date_end'], fn($q) => $q->whereDate('created_at', '<=', $data['date_end']))
+                            ->when($data['date_start'], fn($q) => $q->whereDate('date', '>=', $data['date_start']))
+                            ->when($data['date_end'], fn($q) => $q->whereDate('date', '<=', $data['date_end']))
                             // Handle Outcome (skip if 'all')
                             ->when($data['outcome'] !== 'all', fn($q) => $q->where('outcome', $data['outcome']));
                     })
@@ -295,7 +312,6 @@ class GameReportsTable
                     ->color('primary')
             )
             ->recordActions([
-                // ViewAction::make(),
                 // EditAction::make(),
             ])
             ->toolbarActions([

@@ -22,7 +22,7 @@ class CurrencyRateResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::CurrencyDollar;
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 34;
 
     public static function form(Schema $schema): Schema
     {

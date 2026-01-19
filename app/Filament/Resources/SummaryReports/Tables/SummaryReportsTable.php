@@ -36,9 +36,7 @@ class SummaryReportsTable
     {
         return $table
             ->query(function ($livewire) {
-                // Access the 'report_filters' state specifically
                 $filters = $livewire->tableFilters['report_filters'] ?? [];
-                
                 return static::getSummaryQuery($filters);
             })
             ->columns([
