@@ -32,39 +32,9 @@ class SubProviderPolicy
         return $authUser->can('Update:SubProvider');
     }
 
-    public function delete(AuthUser $authUser, SubProvider $subProvider): bool
+    public function approve(AuthUser $authUser): bool
     {
-        return $authUser->can('Delete:SubProvider');
-    }
-
-    public function restore(AuthUser $authUser, SubProvider $subProvider): bool
-    {
-        return $authUser->can('Restore:SubProvider');
-    }
-
-    public function forceDelete(AuthUser $authUser, SubProvider $subProvider): bool
-    {
-        return $authUser->can('ForceDelete:SubProvider');
-    }
-
-    public function forceDeleteAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('ForceDeleteAny:SubProvider');
-    }
-
-    public function restoreAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('RestoreAny:SubProvider');
-    }
-
-    public function replicate(AuthUser $authUser, SubProvider $subProvider): bool
-    {
-        return $authUser->can('Replicate:SubProvider');
-    }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:SubProvider');
+        return $authUser->can('Approve:SubProvider');
     }
 
 }

@@ -32,39 +32,9 @@ class GamePolicy
         return $authUser->can('Update:Game');
     }
 
-    public function delete(AuthUser $authUser, Game $game): bool
+    public function approve(AuthUser $authUser): bool
     {
-        return $authUser->can('Delete:Game');
-    }
-
-    public function restore(AuthUser $authUser, Game $game): bool
-    {
-        return $authUser->can('Restore:Game');
-    }
-
-    public function forceDelete(AuthUser $authUser, Game $game): bool
-    {
-        return $authUser->can('ForceDelete:Game');
-    }
-
-    public function forceDeleteAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('ForceDeleteAny:Game');
-    }
-
-    public function restoreAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('RestoreAny:Game');
-    }
-
-    public function replicate(AuthUser $authUser, Game $game): bool
-    {
-        return $authUser->can('Replicate:Game');
-    }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:Game');
+        return $authUser->can('Approve:Game');
     }
 
 }

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\SettlementLogger;
+
 return [
 
     /*
@@ -122,16 +124,15 @@ return [
         'merge' => true,
         'generate' => true,
         'methods' => [
-            'viewAny', 'view', 'create', 'update', 'delete', 'restore',
-            'forceDelete', 'forceDeleteAny', 'restoreAny', 'replicate', 'reorder',
+            'viewAny', 'view', 'create', 'update', 'approve', 'reject',
+            # 'approve', 'delete', 'restore', 'forceDelete', 'forceDeleteAny', 'restoreAny', 'replicate', 'reorder',
         ],
         'single_parameter_methods' => [
             'viewAny',
-            'create',
-            'deleteAny',
-            'forceDeleteAny',
-            'restoreAny',
-            'reorder',
+            'create', 'approve', 'reject',
+            // 'approve',
+            #'deleteAny', 'forceDeleteAny', 'restoreAny', 'reorder',
+            
         ],
     ],
 
@@ -171,6 +172,12 @@ return [
                 'create',
                 'update',
                 'delete',
+            ],
+            SettlementLogger::class => [
+                'viewAny',
+                'view',
+                'create',
+                'approve',
             ],
         ],
         'exclude' => [

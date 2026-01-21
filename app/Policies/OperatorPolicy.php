@@ -32,39 +32,9 @@ class OperatorPolicy
         return $authUser->can('Update:Operator');
     }
 
-    public function delete(AuthUser $authUser, Operator $operator): bool
+    public function approve(AuthUser $authUser): bool
     {
-        return $authUser->can('Delete:Operator');
-    }
-
-    public function restore(AuthUser $authUser, Operator $operator): bool
-    {
-        return $authUser->can('Restore:Operator');
-    }
-
-    public function forceDelete(AuthUser $authUser, Operator $operator): bool
-    {
-        return $authUser->can('ForceDelete:Operator');
-    }
-
-    public function forceDeleteAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('ForceDeleteAny:Operator');
-    }
-
-    public function restoreAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('RestoreAny:Operator');
-    }
-
-    public function replicate(AuthUser $authUser, Operator $operator): bool
-    {
-        return $authUser->can('Replicate:Operator');
-    }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:Operator');
+        return $authUser->can('Approve:Operator');
     }
 
 }

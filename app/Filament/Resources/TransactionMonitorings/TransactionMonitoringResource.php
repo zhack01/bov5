@@ -16,7 +16,7 @@ class TransactionMonitoringResource extends Resource
 {
     protected static ?string $model = TransactionMonitoring::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::ComputerDesktop;
 
     protected static ?string $recordTitleAttribute = 'round_id';
 

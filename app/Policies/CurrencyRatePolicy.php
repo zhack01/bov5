@@ -32,39 +32,9 @@ class CurrencyRatePolicy
         return $authUser->can('Update:CurrencyRate');
     }
 
-    public function delete(AuthUser $authUser, CurrencyRate $currencyRate): bool
+    public function approve(AuthUser $authUser): bool
     {
-        return $authUser->can('Delete:CurrencyRate');
-    }
-
-    public function restore(AuthUser $authUser, CurrencyRate $currencyRate): bool
-    {
-        return $authUser->can('Restore:CurrencyRate');
-    }
-
-    public function forceDelete(AuthUser $authUser, CurrencyRate $currencyRate): bool
-    {
-        return $authUser->can('ForceDelete:CurrencyRate');
-    }
-
-    public function forceDeleteAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('ForceDeleteAny:CurrencyRate');
-    }
-
-    public function restoreAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('RestoreAny:CurrencyRate');
-    }
-
-    public function replicate(AuthUser $authUser, CurrencyRate $currencyRate): bool
-    {
-        return $authUser->can('Replicate:CurrencyRate');
-    }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:CurrencyRate');
+        return $authUser->can('Approve:CurrencyRate');
     }
 
 }

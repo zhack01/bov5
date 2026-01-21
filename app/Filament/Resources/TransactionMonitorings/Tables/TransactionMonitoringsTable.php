@@ -8,6 +8,7 @@ use App\Models\Operator;
 use App\Traits\HasTransactionDetails;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -60,7 +61,7 @@ class TransactionMonitoringsTable
                             ->modalSubmitAction(false)
                             ->modalContent(function ($record) {
                                 $tableInstance = new self();
-
+                                
                                 $extensionData = $tableInstance->fetchExtensionData($record);
                 
                                 $data = array_merge([
@@ -152,6 +153,8 @@ class TransactionMonitoringsTable
                     ->color(fn ($state): string => match ((int)$state) {
                         2 => 'success', 1 => 'danger', 3 => 'warning', default => 'gray',
                     }),
+                TextColumn::make('operator_id')->visible(false),
+                TextColumn::make('operators.client_name')->visible(false)
             ])
             ->deferFilters() 
             ->filtersFormColumns(1)

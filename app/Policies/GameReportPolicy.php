@@ -32,39 +32,9 @@ class GameReportPolicy
         return $authUser->can('Update:GameReport');
     }
 
-    public function delete(AuthUser $authUser, GameReport $gameReport): bool
+    public function approve(AuthUser $authUser): bool
     {
-        return $authUser->can('Delete:GameReport');
-    }
-
-    public function restore(AuthUser $authUser, GameReport $gameReport): bool
-    {
-        return $authUser->can('Restore:GameReport');
-    }
-
-    public function forceDelete(AuthUser $authUser, GameReport $gameReport): bool
-    {
-        return $authUser->can('ForceDelete:GameReport');
-    }
-
-    public function forceDeleteAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('ForceDeleteAny:GameReport');
-    }
-
-    public function restoreAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('RestoreAny:GameReport');
-    }
-
-    public function replicate(AuthUser $authUser, GameReport $gameReport): bool
-    {
-        return $authUser->can('Replicate:GameReport');
-    }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:GameReport');
+        return $authUser->can('Approve:GameReport');
     }
 
 }

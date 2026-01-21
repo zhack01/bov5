@@ -1,6 +1,7 @@
 @props(['record', 'transactions', 'total', 'syncPayout'])
 
 <style>
+    /* Light Mode (Default) */
     .transaction-modal {
         --tm-bg-card: #ffffff;
         --tm-bg-table: #ffffff;
@@ -12,17 +13,16 @@
         --tm-bg-code: #eff6ff;
     }
 
-    @media (prefers-color-scheme: dark) {
-        .transaction-modal {
-            --tm-bg-card: #1f2937;
-            --tm-bg-table: #111827;
-            --tm-bg-header: #1f2937;
-            --tm-border: #374151;
-            --tm-text-main: #f8fafc;
-            --tm-text-muted: #94a3b8;
-            --tm-text-code: #60a5fa;
-            --tm-bg-code: rgba(59, 130, 246, 0.1);
-        }
+    /* Dark Mode (When Filament adds the .dark class to the html/body) */
+    .dark .transaction-modal {
+        --tm-bg-card: #1f2937;
+        --tm-bg-table: #111827;
+        --tm-bg-header: #1f2937;
+        --tm-border: #374151;
+        --tm-text-main: #f8fafc;
+        --tm-text-muted: #94a3b8;
+        --tm-text-code: #60a5fa;
+        --tm-bg-code: rgba(59, 130, 246, 0.1);
     }
 </style>
 
@@ -90,6 +90,7 @@
                     <th style="padding: 14px 16px; font-weight: 600; color: var(--tm-text-muted); text-transform: uppercase; font-size: 11px;">Type</th>
                     <th style="padding: 14px 16px; font-weight: 600; color: var(--tm-text-muted); text-transform: uppercase; font-size: 11px; text-align: right;">Amount</th>
                     <th style="padding: 14px 16px; font-weight: 600; color: var(--tm-text-muted); text-transform: uppercase; font-size: 11px; text-align: center;">Status</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--tm-text-muted); text-transform: uppercase; font-size: 11px; text-align: center;">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,50 +115,70 @@
                                 {{ $item->transaction_status }}
                             </span>
                         </td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            <button 
+                                type="button"
+                                x-on:click="
+                                    const params = new URLSearchParams({
+                                        raw_id: '{{ $item->id }}',
+                                        round_id: '{{ $item->round_id }}',
+                                        trans_id: '{{ $item->transaction_id }}',
+                                        operator_id: '{{ $record->operators?->operator_id }}',
+                                        client_name: '{{ $record->operators?->client_name }}',
+                                        display_id: '{{ str($item->id)->mask('*', 3, -3) }}',
+                                        amount: '{{ $item->amount }}',
+                                        player: '{{ $record->player_id }}',
+                                        type: '{{ strtolower($item->type) }}'
+                                    });
+                                    window.open(`/admin/settlement-loggers/create?${params.toString()}`, '_blank');
+                                "
+                                style="cursor: pointer; background: #6366f1; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+                            >
+                                Settle TX
+                            </button>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
 
-    @if($syncPayout)
     <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-        <button 
-            type="button"
-            {{-- When clicked, wait for the server response, then find the close button and click it --}}
-            wire:click.stop="syncAmount('{{ $record->round_id }}', {{ $total }})"
-            x-on:click="
-                setTimeout(() => {
-                    let closeBtn = $el.closest('.fi-modal').querySelector('.fi-modal-close-btn');
-                    if (closeBtn) closeBtn.click();
-                    // Fallback for older Filament versions
-                    let cancelBtn = document.querySelector('.fi-modal-footer button[color=\'gray\']');
-                    if (cancelBtn) cancelBtn.click();
-                }, 1000)
-            "
-            wire:loading.attr="disabled"
-            style="cursor: pointer; background: #f59e0b; color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
-            onmouseover="this.style.background='#d97706'" 
-            onmouseout="this.style.background='#f59e0b'"
-            wire:loading.class="opacity-70 cursor-not-allowed"
-        >
-            <x-heroicon-m-arrow-path 
-                style="width: 16px; height: 16px;" 
-                wire:loading.class="animate-spin" 
-                wire:target="syncAmount" 
-            />
-            
-            <span wire:loading.remove wire:target="syncAmount">
-                Sync Report Win to Extension Total
-            </span>
-            
-            <span wire:loading wire:target="syncAmount">
-                Syncing...
-            </span>
-        </button>
+        @if($syncPayout)
+            <button 
+                type="button"
+                wire:click.stop="syncAmount('{{ $record->round_id }}', {{ $total }})"
+                x-on:click="
+                    setTimeout(() => {
+                        let closeBtn = $el.closest('.fi-modal').querySelector('.fi-modal-close-btn');
+                        if (closeBtn) closeBtn.click();
+                        let cancelBtn = document.querySelector('.fi-modal-footer button[color=\'gray\']');
+                        if (cancelBtn) cancelBtn.click();
+                    }, 1000)
+                "
+                wire:loading.attr="disabled"
+                style="cursor: pointer; background: #f59e0b; color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+                onmouseover="this.style.background='#d97706'" 
+                onmouseout="this.style.background='#f59e0b'"
+                wire:loading.class="opacity-70 cursor-not-allowed"
+            >
+                <x-heroicon-m-arrow-path 
+                    style="width: 16px; height: 16px;" 
+                    wire:loading.class="animate-spin" 
+                    wire:target="syncAmount" 
+                />
+                
+                <span wire:loading.remove wire:target="syncAmount">
+                    Sync Report Win to Extension Total
+                </span>
+                
+                <span wire:loading wire:target="syncAmount">
+                    Syncing...
+                </span>
+            </button>
+        @endif
     </div>
-    @endif
-    {{-- Add this small style block if your project doesn't have Tailwind's animate-spin --}}
+
     <style>
         @keyframes spin {
             from { transform: rotate(0deg); }
@@ -170,5 +191,4 @@
             opacity: 0.7;
         }
     </style>
-    
 </div>

@@ -67,6 +67,11 @@ class UserForm
                             ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
                             ->dehydrated(fn ($state) => filled($state)),
 
+                        TextInput::make('allowed_ip')
+                            ->label('Authorized IP Address')
+                            ->placeholder('e.g. 192.168.1.1')
+                            ->helperText('Leave blank to allow login from any IP.'),
+
                         Select::make('roles')
                             ->relationship('roles', 'name')
                             ->multiple()

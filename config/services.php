@@ -37,4 +37,11 @@ return [
 
     'currency_api_key' => env('CURRENCY_API_KEY'),
 
+    'jira' => [
+        'domain' => env('JIRA_DOMAIN'),
+        'user' => env('JIRA_USER'),
+        'token' => env('JIRA_TOKEN'),
+        'project' => env('JIRA_PROJECT_KEY'),
+    ],
+
 ];

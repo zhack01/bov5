@@ -81,7 +81,7 @@ trait HasTransactionDetails
             $url = config('app.env') === 'production' 
                 ? env('BO_API_PROD_URL') 
                 : env('BO_API_STAGE_URL');
-
+                // dd($url);
             $response = Http::asForm()
                 ->withHeaders($this->getSecureHeaders())
                 ->post($url . "/api/transaction/inquiry", [
@@ -94,7 +94,7 @@ trait HasTransactionDetails
             if ($response->successful()) {
                 $res = $response->json();
                 $this->inquiryStatus = $res['code'] ?? 'Processed';
-                $this->inquiryResponse = "Data retrieved successfully"; 
+                $this->inquiryResponse =  $res['status'] ?? "Data retrieved successfully"; 
             } else {
                 $this->inquiryStatus = "HTTP " . $response->status();
             }
@@ -118,7 +118,7 @@ trait HasTransactionDetails
         $dbExt = DB::connection('extension_read');
 
         $transactions = $dbExt->select("
-            SELECT transaction_id, amount, round_id, provider_transaction_id pt_id, provider_round_id pr_id, 
+            SELECT id, transaction_id, amount, round_id, provider_transaction_id pt_id, provider_round_id pr_id, 
             (CASE WHEN transaction_type = 1 THEN 'debit' WHEN transaction_type = 2 THEN 'credit' ELSE 'refund' END) as type, 
             CONVERT_TZ(created_at, '+00:00', '+08:00') as date,
             (CASE 
@@ -145,6 +145,45 @@ trait HasTransactionDetails
             'transactions' => $transactions,
             'total' => $totalRow->total ?? 0,
             'syncPayout' => (round($record->win, 2) != round(($totalRow->total ?? 0), 2)),
+        ];
+    }
+
+    public function fetchByTransactionId($record)
+    {
+
+        $operator_table = "transaction_" . $record->client_name;
+        $dbExt = DB::connection('extension_read');
+
+        $transactions = $dbExt->select("
+            SELECT id, transaction_id, amount, round_id, provider_transaction_id pt_id, provider_round_id pr_id, player_id,
+            (CASE WHEN transaction_type = 1 THEN 'debit' WHEN transaction_type = 2 THEN 'credit' ELSE 'refund' END) as type, 
+            CONVERT_TZ(created_at, '+00:00', '+08:00') as date,
+            (CASE 
+                WHEN transaction_status = 1 then 'SUCCESS_TRANSACTION' 
+                WHEN transaction_status = 2 then 'TRANSACTION_FAILED_NOT_ENOUGH_BALANCE' 
+                WHEN transaction_status = 3 then 'TRANSACTION_FAILED' 
+                WHEN transaction_status = 4 then 'CLIENT_SERVER_ERROR' 
+                WHEN transaction_status = 5 then 'ROUND_NOT_FOUND' 
+                WHEN transaction_status = 6 then 'TRANSACTION_NOT_FOUND' 
+                WHEN transaction_status = 7 then 'GAME_NOT_FOUND'
+            END) as transaction_status 
+            FROM mwapiv2_transactions.$operator_table 
+            WHERE round_id = ?", [$record->round_id]);
+
+        $totalRow = $dbExt->selectOne("
+            SELECT SUM(sub_amount) as total FROM (
+                SELECT SUM(amount) as sub_amount 
+                FROM mwapiv2_transactions.$operator_table 
+                WHERE round_id = ? AND transaction_type > 1 
+                GROUP BY transaction_id, provider_transaction_id
+            ) tbl", [$record->round_id]);
+        $firstRow = !empty($transactions) ? $transactions[0] : null;
+
+        return [
+            'transactions' => $transactions,
+            'total' => $totalRow->total ?? 0,
+            'syncPayout' => (round($record->win, 2) != round(($totalRow->total ?? 0), 2)),
+            'player_id' => $firstRow ? $firstRow->player_id : 'N/A'
         ];
     }
 
