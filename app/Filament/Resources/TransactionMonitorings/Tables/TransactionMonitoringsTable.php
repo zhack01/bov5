@@ -75,7 +75,7 @@ class TransactionMonitoringsTable
                             })
                     ),
                 
-                TextColumn::make('operators.client_name')->label('Operator')->sortable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('operators.client_name')->label('Operator')->sortable(),
                 TextColumn::make('clients.client_name')->label('Client')->sortable()->toggleable(isToggledHiddenByDefault: false),
                 TextColumn::make('partners.provider_name')
                     ->label('Partner')
@@ -288,7 +288,7 @@ class TransactionMonitoringsTable
                     ])
                     ->query(function ($query, array $data) {
                         if (! empty($data['search_round_id'])) {
-                            return $query->where('round_id', $data['search_round_id']);
+                            return $query->where('round_id', str_replace(' ', '', $data['search_round_id']));
                         }
 
                         return $query
@@ -296,8 +296,8 @@ class TransactionMonitoringsTable
                             ->whereRaw("outcome <> 2")
                             ->when($data['operator_id'], fn($q) => $q->where('operator_id', $data['operator_id']))
                             ->when($data['client_id'], fn($q) => $q->where('client_id', $data['client_id']))
-                            ->when($data['provider_id'], fn($q) => $q->where('provider_id', $data['provider_id']))
-                            ->when($data['sub_provider_id'], fn($q) => $q->where('sub_provider_id', $data['sub_provider_id']))
+                            ->when($data['provider_id'], fn($q) => $q->where('providers.provider_id', $data['provider_id']))
+                            ->when($data['sub_provider_id'], fn($q) => $q->where('provider_id', $data['sub_provider_id']))
                             ->when($data['game_id'], fn($q) => $q->where('game_id', $data['game_id']))
                             ->when($data['player_id'], fn($q) => $q->where('player_id', $data['player_id']))
                             // Handle Date Range

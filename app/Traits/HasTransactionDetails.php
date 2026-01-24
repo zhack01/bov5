@@ -28,16 +28,16 @@ trait HasTransactionDetails
     public function getBalance($playerId)
     {
         // SECURITY: Check if user has permission to view balances
-        if (!Auth::user()?->can('view_player_balance')) {
-            $this->playerBalance = "Unauthorized";
-            return;
-        }
+        // if (!Auth::user()?->can('view_player_balance')) {
+        //     $this->playerBalance = "Unauthorized";
+        //     return;
+        // }
 
         // LOCAL MOCK: Skip API calls in local environment
-        if (app()->isLocal()) {
-            $this->playerBalance = number_format(rand(1000, 5000), 2);
-            return;
-        }
+        // if (app()->isLocal()) {
+        //     $this->playerBalance = number_format(rand(1000, 5000), 2);
+        //     return;
+        // }
 
         try {
             $url = config('app.env') === 'production' 
@@ -71,11 +71,11 @@ trait HasTransactionDetails
         abort_unless(Auth::check(), 403);
 
         // LOCAL MOCK: Skip API calls in local environment
-        if (app()->isLocal()) {
-            $this->inquiryStatus = "MOCK_200";
-            $this->inquiryResponse = "Local Simulated Success for $transactionId";
-            return;
-        }
+        // if (app()->isLocal()) {
+        //     $this->inquiryStatus = "MOCK_200";
+        //     $this->inquiryResponse = "Local Simulated Success for $transactionId";
+        //     return;
+        // }
 
         try {
             $url = config('app.env') === 'production' 
